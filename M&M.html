@@ -1,0 +1,38 @@
+</head>
+<body>
+  <h1>🐾 Mango & Mocha Game</h1>
+  <img src="images/mango-mocha.jpg" alt="Mango and Mocha">
+  
+  <div class="game-desc">
+    <p>
+      Welcome to the <strong>Mango & Mocha Game</strong>! 🎮  
+      Inspired by the classic Google Chrome Dino game, but with a fun twist — you get to play as either Mango 🐕 (the corgi mix) or Mocha 🐕 (the chocolate lab).  
+    </p>
+    <p>
+      The game will have you jump over obstacles and collect treats along the way.  
+      Can you beat your high score with your favorite pup? 🦴✨
+    </p>
+    <p><em>Stay tuned... this game is currently in development!</em></p>
+  </div>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mango & Mocha Game</title>
+</head>
+<body>
+  <div id="characterSelect" style="text-align: center; margin: 30px;">
+    <h2>Choose Your Pup 🐶</h2>
+    <button onclick="startGame('mango')">Play as Mango 🟠</button>
+    <button onclick="startGame('mocha')">Play as Mocha 🍫</button>
+  </div>
+
+  <canvas id="gameCanvas" width="800" height="300" style="display:none;"></canvas>
+
+  <!-- Make sure this is LAST -->
+  <script src="M&M.js"></script>
+</body>
+</html>
