@@ -41,6 +41,21 @@ function startGame(choice) {
   requestAnimationFrame(gameLoop);
 }
 
+// Jump
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && dog && dog.grounded && !gameOver) {
+    dog.dy = dog.jumpPower;
+    dog.grounded = false;
+  }
+});
+
+// Restart
+document.addEventListener("keydown", (e) => {
+  if (e.code === "KeyR" && gameOver) {
+    document.getElementById("characterSelect").style.display = "block";
+    canvas.style.display = "none";
+  }
+});
 
 // Game loop
 function gameLoop() {
