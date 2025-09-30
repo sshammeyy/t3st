@@ -23,11 +23,6 @@ function resetGame(choice) {
   }
 }
 
-// Start game
-function startGame(choice) {
-  document.getElementById("characterSelect").style.display = "none";
-  canvas.style.display = "block";
-
   resetGame(choice);
 
   if (obstacleInterval) clearInterval(obstacleInterval);
