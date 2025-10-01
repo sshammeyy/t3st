@@ -40,114 +40,139 @@
   <canvas id="gameCanvas" width="800" height="300"></canvas>
 
   <!-- Game Script -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mocha & Mango Runner</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: skyblue;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    let dog, dogImg, obstacles, score, gameOver, obstacleInterval;
+    // Load dog images
+    const mochaImg = new Image();
+    mochaImg.src = "mocha.jpg"; // replace with actual path
+    const mangoImg = new Image();
+    mangoImg.src = "mango.jpg"; // replace with actual path
 
-    const obstacleImg = new Image();
-    obstacleImg.src = "images/bone.png";
+    // Game variables
+    let dogs = [
+      { x: 100, y: 300, width: 50, height: 50, dy: 0, jumping: false, img: mochaImg },
+      { x: 160, y: 300, width: 50, height: 50, dy: 0, jumping: false, img: mangoImg }
+    ];
+    let gravity = 0.6;
+    let jumpPower = -12;
+    let floor = 350;
 
-    function resetGame(choice) {
-      dog = { x: 50, y: 220, width: 50, height: 50, dy: 0, gravity: 1.2, jumpPower: -18, grounded: true };
-      obstacles = [];
-      score = 0;
-      gameOver = false;
-      dogImg = new Image();
-      dogImg.src = choice === "mango" ? "images/mango.jpg" : "images/mocha.jpg";
+    let obstacles = [];
+    let frame = 0;
+    let gameOver = false;
+
+    // Jump on spacebar
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        dogs.forEach(dog => {
+          if (!dog.jumping) {
+            dog.dy = jumpPower;
+            dog.jumping = true;
+          }
+        });
+      }
+    });
+
+    function drawFloor() {
+      ctx.fillStyle = "green";
+      ctx.fillRect(0, floor + 50, canvas.width, canvas.height - floor);
     }
 
-    function startGame(choice) {
-      document.getElementById("characterSelect").style.display = "none";
-      canvas.style.display = "block";
-      resetGame(choice);
+    function drawDogs() {
+      dogs.forEach(dog => {
+        ctx.drawImage(dog.img, dog.x, dog.y, dog.width, dog.height);
+      });
+    }
 
-      if (obstacleInterval) clearInterval(obstacleInterval);
-      obstacleInterval = setInterval(() => {
-        if (!gameOver) {
-          obstacles.push({ x: canvas.width, y: 230, width: 40, height: 40 });
+    function updateDogs() {
+      dogs.forEach(dog => {
+        dog.y += dog.dy;
+        dog.dy += gravity;
+
+        if (dog.y + dog.height >= floor) {
+          dog.y = floor - dog.height;
+          dog.jumping = false;
         }
-      }, 1800);
-
-      requestAnimationFrame(gameLoop);
+      });
     }
 
-    function jump() {
-      if (dog && dog.grounded && !gameOver) {
-        dog.dy = dog.jumpPower;
-        dog.grounded = false;
+    function createObstacle() {
+      if (frame % 100 === 0) {
+        let size = 40;
+        obstacles.push({ x: canvas.width, y: floor - size, width: size, height: size });
       }
     }
 
-    document.addEventListener("keydown", (e) => {
-      if (e.code === "Space") jump();
-      if (e.code === "KeyR" && gameOver) restartGame();
-    });
-    canvas.addEventListener("click", () => jump());
-    canvas.addEventListener("touchstart", () => jump());
-
-    function restartGame() {
-      document.getElementById("characterSelect").style.display = "block";
-      canvas.style.display = "none";
+    function drawObstacles() {
+      ctx.fillStyle = "brown";
+      obstacles.forEach(ob => {
+        ctx.fillRect(ob.x, ob.y, ob.width, ob.height);
+      });
     }
 
-    function gameLoop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function updateObstacles() {
+      obstacles.forEach(ob => ob.x -= 6);
+      obstacles = obstacles.filter(ob => ob.x + ob.width > 0);
+    }
 
+    function checkCollision() {
+      dogs.forEach(dog => {
+        obstacles.forEach(ob => {
+          if (
+            dog.x < ob.x + ob.width &&
+            dog.x + dog.width > ob.x &&
+            dog.y < ob.y + ob.height &&
+            dog.y + dog.height > ob.y
+          ) {
+            gameOver = true;
+          }
+        });
+      });
+    }
+
+    function loop() {
       if (gameOver) {
-        ctx.fillStyle = "red";
-        ctx.font = "30px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Game Over!", canvas.width / 2, 120);
         ctx.fillStyle = "black";
-        ctx.font = "20px Arial";
-        ctx.fillText("Final Score: " + score, canvas.width / 2, 160);
-        ctx.fillText("Press R to Restart", canvas.width / 2, 200);
+        ctx.font = "40px Arial";
+        ctx.fillText("Game Over!", 300, 200);
         return;
       }
 
-      ctx.fillStyle = "#6c4c3f"; // ground
-      ctx.fillRect(0, 270, canvas.width, 30);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawFloor();
 
-      // Dog physics
-      dog.y += dog.dy;
-      if (dog.y + dog.height >= 270) {
-        dog.y = 220;
-        dog.dy = 0;
-        dog.grounded = true;
-      } else {
-        dog.dy += dog.gravity;
-      }
+      drawDogs();
+      updateDogs();
 
-      ctx.drawImage(dogImg, dog.x, dog.y, dog.width, dog.height);
+      createObstacle();
+      drawObstacles();
+      updateObstacles();
 
-      for (let i = 0; i < obstacles.length; i++) {
-        let obs = obstacles[i];
-        obs.x -= 6;
-        ctx.drawImage(obstacleImg, obs.x, obs.y, obs.width, obs.height);
+      checkCollision();
 
-        if (
-          dog.x < obs.x + obs.width &&
-          dog.x + dog.width > obs.x &&
-          dog.y < obs.y + obs.height &&
-          dog.height + dog.y > obs.y
-        ) {
-          gameOver = true;
-          clearInterval(obstacleInterval);
-        }
-      }
-
-      obstacles = obstacles.filter(obs => obs.x > -obs.width);
-
-      score++;
-      ctx.fillStyle = "black";
-      ctx.font = "20px Arial";
-      ctx.textAlign = "left";
-      ctx.fillText("Score: " + score, 20, 30);
-
-      requestAnimationFrame(gameLoop);
+      frame++;
+      requestAnimationFrame(loop);
     }
+
+    loop();
   </script>
 </body>
 </html>
