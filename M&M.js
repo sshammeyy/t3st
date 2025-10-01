@@ -100,16 +100,14 @@ function gameLoop() {
   ctx.fillStyle = "#6c4c3f";
   ctx.fillRect(0, 270, canvas.width, 30);
 
-  // Dog physics
-  dog.y += dog.dy;
-  const groundY = 270 - dog.height; // ground level (feet touching the ground)
-  if (dog.y >= groundY) {
-    dog.y = groundY;
-    dog.dy = 0;
-    dog.grounded = true;
-  } else {
-    dog.dy += dog.gravity;
-  }
+ // Dog physics with forward motion
+dog.x += 4; // move dog to the right
+
+// Reset dog to left side if it goes off screen
+if (dog.x > canvas.width - dog.width) {
+  dog.x = 50; // loop back to start
+}
+
 
   // Draw dog (Mango or Mocha)
   ctx.drawImage(dogImg, dog.x, dog.y, dog.width, dog.height);
