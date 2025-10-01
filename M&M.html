@@ -1,149 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Mocha & Mango Runner</title>
-  <style>
-    body {
-      background: #cce7ff;
-      text-align: center;
-      font-family: Arial, sans-serif;
-    }
-    canvas {
-      display: block;
-      margin: 20px auto;
-      background: #87CEEB;
-      border: 2px solid #333;
-    }
-    #restartBtn {
-      display: none;
-      padding: 10px 20px;
-      font-size: 18px;
-      margin-top: 10px;
-      cursor: pointer;
-      border-radius: 5px;
-      border: none;
-      background-color: #ff914d;
-      color: white;
-    }
-    #restartBtn:hover {
-      background-color: #e67a34;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mango & Mocha Game</title>
+<style>
+  body {
+    text-align: center;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    border: 2px solid black;
+    background-color: #87CEEB; /* sky blue */
+    display: block;
+    margin: 20px auto;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 18px;
+    margin: 10px;
+    cursor: pointer;
+  }
+</style>
 </head>
 <body>
-  <h1>🐾 Mango & Mocha Runner</h1>
-  <p>Press <b>Space</b> or Tap to Jump 🐶</p>
-  <canvas id="gameCanvas" width="800" height="400"></canvas>
-  <button id="restartBtn" onclick="restartGame()">🔄 Restart</button>
 
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const restartBtn = document.getElementById("restartBtn");
+<div id="characterSelect">
+  <h2>Choose Your Pup 🐶</h2>
+  <button onclick="startGame('mango')">Play as Mango 🟠</button>
+  <button onclick="startGame('mocha')">Play as Mocha 🍫</button>
+</div>
 
-    // Load dog images
-    const mochaImg = new Image();
-    mochaImg.src = "mocha.jpg"; // replace with real path
-    const mangoImg = new Image();
-    mangoImg.src = "mango.jpg"; // replace with real path
+<canvas id="gameCanvas" width="800" height="300"></canvas>
 
-    // Load treat image
-    const treatImg = new Image();
-    treatImg.src = "bone.png"; // bonus collectible
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-    // Game variables
-    let dogs, gravity, jumpPower, floor, obstacles, treats, frame, gameOver, score;
+// Game state
+let dog, dogImg, obstacles, treats, score, gameOver, obstacleInterval, treatInterval, obstacleSpeed;
+let floorX = 0;
 
-    function initGame() {
-      dogs = [
-        { x: 100, y: 300, width: 50, height: 50, dy: 0, jumping: false, img: mochaImg },
-        { x: 160, y: 300, width: 50, height: 50, dy: 0, jumping: false, img: mangoImg }
-      ];
-      gravity = 0.6;
-      jumpPower = -12;
-      floor = 350;
-      obstacles = [];
-      treats = [];
-      frame = 0;
-      gameOver = false;
-      score = 0;
+// Moving clouds for parallax
+let clouds = [];
+
+// Images
+const obstacleImgs = ["images/bone.png", "images/ball.png"];
+const treatImg = new Image();
+treatImg.src = "images/treat.png";
+
+// Cloud image
+const cloudImg = new Image();
+cloudImg.src = "images/cloud.png"; // small cloud PNG
+
+// Restart button
+const restartBtn = document.createElement("button");
+restartBtn.innerText = "🔄 Restart";
+restartBtn.style.display = "none";
+document.body.appendChild(restartBtn);
+restartBtn.onclick = () => {
+  document.getElementById("characterSelect").style.display = "block";
+  canvas.style.display = "none";
+  resetGame("mango");
+};
+
+// Reset game
+function resetGame(choice) {
+  dog = { x: 50, y: 220, width: 50, height: 50, dy: 0, gravity: 1.5, jumpPower: -20, grounded: true };
+  obstacles = [];
+  treats = [];
+  clouds = [];
+  score = 0;
+  gameOver = false;
+  obstacleSpeed = 6;
+  floorX = 0;
+
+  dogImg = new Image();
+  dogImg.src = choice === "mango" ? "images/mango.jpg" : "images/mocha.jpg";
+
+  // Generate clouds
+  for(let i=0; i<5; i++){
+    clouds.push({ x: Math.random()*canvas.width, y: 20+Math.random()*50, speed: 1+Math.random()*1 });
+  }
+
+  restartBtn.style.display = "none";
+}
+
+// Start game
+function startGame(choice) {
+  document.getElementById("characterSelect").style.display = "none";
+  canvas.style.display = "block";
+
+  resetGame(choice);
+
+  if (obstacleInterval) clearInterval(obstacleInterval);
+  obstacleInterval = setInterval(() => {
+    if (!gameOver) {
+      const obsType = obstacleImgs[Math.floor(Math.random()*obstacleImgs.length)];
+      const obsImg = new Image();
+      obsImg.src = obsType;
+      obstacles.push({ x: canvas.width, y: 230, width: 40, height: 40, img: obsImg });
     }
+  }, 2000);
 
-    initGame();
-
-    // Jump
-    function jump() {
-      dogs.forEach(dog => {
-        if (!dog.jumping) {
-          dog.dy = jumpPower;
-          dog.jumping = true;
-        }
-      });
+  if (treatInterval) clearInterval(treatInterval);
+  treatInterval = setInterval(() => {
+    if (!gameOver) {
+      treats.push({ x: canvas.width, y: 200 + Math.random()*40, width: 30, height: 30 });
     }
+  }, 3000);
 
-    document.addEventListener("keydown", e => {
-      if (e.code === "Space") jump();
-    });
-    canvas.addEventListener("click", jump);
-    canvas.addEventListener("touchstart", jump);
+  requestAnimationFrame(gameLoop);
+}
 
-    function drawFloor() {
-      ctx.fillStyle = "green";
-      ctx.fillRect(0, floor + 50, canvas.width, canvas.height - floor);
+// Jump function
+function jump() {
+  if (dog && dog.grounded && !gameOver) {
+    dog.dy = dog.jumpPower;
+    dog.grounded = false;
+  }
+}
+
+// Controls
+document.addEventListener("keydown", e => { if(e.code === "Space") jump(); });
+canvas.addEventListener("mousedown", jump);
+canvas.addEventListener("touchstart", e => { e.preventDefault(); jump(); }, { passive:false });
+
+// Game loop
+function gameLoop() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(gameOver){
+    ctx.fillStyle="red";
+    ctx.font="30px Arial";
+    ctx.textAlign="center";
+    ctx.fillText("Game Over!", canvas.width/2,120);
+    ctx.fillStyle="black";
+    ctx.font="20px Arial";
+    ctx.fillText("Final Score: "+score, canvas.width/2,160);
+    restartBtn.style.display="inline-block";
+    return;
+  }
+
+  // Move and draw clouds
+  clouds.forEach(c=>{
+    c.x -= c.speed;
+    if(c.x<-100) c.x=canvas.width+50;
+    ctx.drawImage(cloudImg, c.x, c.y, 80, 40);
+  });
+
+  // Move floor
+  floorX -= obstacleSpeed;
+  if(floorX <= -canvas.width) floorX = 0;
+
+  // Draw floor
+  ctx.fillStyle="#6c4c3f";
+  ctx.fillRect(floorX, 270, canvas.width, 30);
+  ctx.fillRect(floorX+canvas.width, 270, canvas.width, 30);
+
+  // Dog physics
+  dog.y += dog.dy;
+  if(dog.y + dog.height >= 270){ dog.y=220; dog.dy=0; dog.grounded=true; }
+  else dog.dy += dog.gravity;
+
+  // Draw dog
+  ctx.drawImage(dogImg, dog.x, dog.y, dog.width, dog.height);
+
+  // Obstacles
+  obstacles.forEach((obs)=>{
+    obs.x -= obstacleSpeed;
+    ctx.drawImage(obs.img, obs.x, obs.y, obs.width, obs.height);
+    if(dog.x < obs.x + obs.width && dog.x + dog.width > obs.x && dog.y < obs.y + obs.height && dog.y + dog.height > obs.y){
+      gameOver=true;
+      clearInterval(obstacleInterval);
+      clearInterval(treatInterval);
     }
+  });
+  obstacles = obstacles.filter(obs => obs.x > -obs.width);
 
-    function drawDogs() {
-      dogs.forEach(dog => {
-        ctx.drawImage(dog.img, dog.x, dog.y, dog.width, dog.height);
-      });
+  // Treats
+  treats.forEach((treat, idx)=>{
+    treat.x -= obstacleSpeed;
+    ctx.drawImage(treatImg, treat.x, treat.y, treat.width, treat.height);
+    if(dog.x < treat.x + treat.width && dog.x + dog.width > treat.x && dog.y < treat.y + treat.height && dog.y + dog.height > treat.y){
+      score += 50; // bonus points
+      treats.splice(idx,1);
     }
+  });
+  treats = treats.filter(treat => treat.x > -treat.width);
 
-    function updateDogs() {
-      dogs.forEach(dog => {
-        dog.y += dog.dy;
-        dog.dy += gravity;
-        if (dog.y + dog.height >= floor) {
-          dog.y = floor - dog.height;
-          dog.jumping = false;
-        }
-      });
-    }
+  // Score
+  score++;
+  ctx.fillStyle="black";
+  ctx.font="20px Arial";
+  ctx.textAlign="left";
+  ctx.fillText("Score: "+score, 20,30);
 
-    function createObstacle() {
-      if (frame % 100 === 0) {
-        let size = 40;
-        obstacles.push({ x: canvas.width, y: floor - size, width: size, height: size });
-      }
-    }
+  // Gradually increase difficulty
+  if(score % 200 === 0) obstacleSpeed += 0.3;
 
-    function drawObstacles() {
-      ctx.fillStyle = "brown";
-      obstacles.forEach(ob => {
-        ctx.fillRect(ob.x, ob.y, ob.width, ob.height);
-      });
-    }
-
-    function updateObstacles() {
-      obstacles.forEach(ob => ob.x -= 6);
-      obstacles = obstacles.filter(ob => ob.x + ob.width > 0);
-    }
-
-    function createTreat() {
-      if (frame % 200 === 0) {
-        treats.push({ x: canvas.width, y: floor - 100, width: 30, height: 30 });
-      }
-    }
-
-    function drawTreats() {
-      treats.forEach(t => {
-        ctx.drawImage(treatImg, t.x, t.y, t.width, t.height);
-      });
-    }
-
-    function updateTreats() {
-      treats.forEach(t => t.x -= 6);
-      treats = treats.filter(t => t.x + t.width > 0);
-    }
-
-    function che
+  requestAnimationFrame(gameLoop);
+}
+</script>
+</body>
+</html>
