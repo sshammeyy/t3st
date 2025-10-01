@@ -2,94 +2,91 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mango & Mocha Game</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-    canvas {
-      border: 1px solid black;
-      display: none;
-      margin-top: 20px;
-    }
-  </style>
-</head>
-<body>
-  <h1>🐾 Mango & Mocha Game</h1>
-  <img src="images/mango-mocha.jpg" alt="Mango and Mocha" width="400">
-
-  <div class="game-desc">
-    <p>
-      Welcome to the <strong>Mango & Mocha Game</strong>! 🎮  
-      Inspired by the classic Google Chrome Dino game, but with a fun twist — you get to play as either Mango 🐕 (the corgi mix) or Mocha 🐕 (the chocolate lab).  
-    </p>
-    <p>
-      Jump over obstacles and test your reflexes.  
-      Can you beat your high score with your favorite pup? 🦴✨
-    </p>
-  </div>
-
-  <div id="characterSelect" style="margin: 30px;">
-    <h2>Choose Your Pup 🐶</h2>
-    <button onclick="startGame('mango')">Play as Mango 🟠</button>
-    <button onclick="startGame('mocha')">Play as Mocha 🍫</button>
-  </div>
-
-  <canvas id="gameCanvas" width="800" height="300"></canvas>
-
-  <!-- Game Script -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
   <title>Mocha & Mango Runner</title>
   <style>
+    body {
+      background: #cce7ff;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
     canvas {
       display: block;
-      margin: 0 auto;
-      background: skyblue;
+      margin: 20px auto;
+      background: #87CEEB;
+      border: 2px solid #333;
+    }
+    #restartBtn {
+      display: none;
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      border: none;
+      background-color: #ff914d;
+      color: white;
+    }
+    #restartBtn:hover {
+      background-color: #e67a34;
     }
   </style>
 </head>
 <body>
+  <h1>🐾 Mango & Mocha Runner</h1>
+  <p>Press <b>Space</b> or Tap to Jump 🐶</p>
   <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <button id="restartBtn" onclick="restartGame()">🔄 Restart</button>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+    const restartBtn = document.getElementById("restartBtn");
 
     // Load dog images
     const mochaImg = new Image();
-    mochaImg.src = "mocha.jpg"; // replace with actual path
+    mochaImg.src = "mocha.jpg"; // replace with real path
     const mangoImg = new Image();
-    mangoImg.src = "mango.jpg"; // replace with actual path
+    mangoImg.src = "mango.jpg"; // replace with real path
+
+    // Load treat image
+    const treatImg = new Image();
+    treatImg.src = "bone.png"; // bonus collectible
 
     // Game variables
-    let dogs = [
-      { x: 100, y: 300, width: 50, height: 50, dy: 0, jumping: false, img: mochaImg },
-      { x: 160, y: 300, width: 50, height: 50, dy: 0, jumping: false, img: mangoImg }
-    ];
-    let gravity = 0.6;
-    let jumpPower = -12;
-    let floor = 350;
+    let dogs, gravity, jumpPower, floor, obstacles, treats, frame, gameOver, score;
 
-    let obstacles = [];
-    let frame = 0;
-    let gameOver = false;
+    function initGame() {
+      dogs = [
+        { x: 100, y: 300, width: 50, height: 50, dy: 0, jumping: false, img: mochaImg },
+        { x: 160, y: 300, width: 50, height: 50, dy: 0, jumping: false, img: mangoImg }
+      ];
+      gravity = 0.6;
+      jumpPower = -12;
+      floor = 350;
+      obstacles = [];
+      treats = [];
+      frame = 0;
+      gameOver = false;
+      score = 0;
+    }
 
-    // Jump on spacebar
-    document.addEventListener("keydown", (e) => {
-      if (e.code === "Space") {
-        dogs.forEach(dog => {
-          if (!dog.jumping) {
-            dog.dy = jumpPower;
-            dog.jumping = true;
-          }
-        });
-      }
+    initGame();
+
+    // Jump
+    function jump() {
+      dogs.forEach(dog => {
+        if (!dog.jumping) {
+          dog.dy = jumpPower;
+          dog.jumping = true;
+        }
+      });
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.code === "Space") jump();
     });
+    canvas.addEventListener("click", jump);
+    canvas.addEventListener("touchstart", jump);
 
     function drawFloor() {
       ctx.fillStyle = "green";
@@ -106,7 +103,6 @@
       dogs.forEach(dog => {
         dog.y += dog.dy;
         dog.dy += gravity;
-
         if (dog.y + dog.height >= floor) {
           dog.y = floor - dog.height;
           dog.jumping = false;
@@ -133,46 +129,21 @@
       obstacles = obstacles.filter(ob => ob.x + ob.width > 0);
     }
 
-    function checkCollision() {
-      dogs.forEach(dog => {
-        obstacles.forEach(ob => {
-          if (
-            dog.x < ob.x + ob.width &&
-            dog.x + dog.width > ob.x &&
-            dog.y < ob.y + ob.height &&
-            dog.y + dog.height > ob.y
-          ) {
-            gameOver = true;
-          }
-        });
+    function createTreat() {
+      if (frame % 200 === 0) {
+        treats.push({ x: canvas.width, y: floor - 100, width: 30, height: 30 });
+      }
+    }
+
+    function drawTreats() {
+      treats.forEach(t => {
+        ctx.drawImage(treatImg, t.x, t.y, t.width, t.height);
       });
     }
 
-    function loop() {
-      if (gameOver) {
-        ctx.fillStyle = "black";
-        ctx.font = "40px Arial";
-        ctx.fillText("Game Over!", 300, 200);
-        return;
-      }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawFloor();
-
-      drawDogs();
-      updateDogs();
-
-      createObstacle();
-      drawObstacles();
-      updateObstacles();
-
-      checkCollision();
-
-      frame++;
-      requestAnimationFrame(loop);
+    function updateTreats() {
+      treats.forEach(t => t.x -= 6);
+      treats = treats.filter(t => t.x + t.width > 0);
     }
 
-    loop();
-  </script>
-</body>
-</html>
+    function che
